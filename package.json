@@ -6,7 +6,8 @@
 	"private": true,
 	"scripts": {
 		"dev": "cross-env NODE_ENV=development node server.js",
-		"start": "cross-env NODE_ENV=production node server.js"
+		"start": "pm2 start server --watch --env production",
+		"stop": "pm2 stop server --watch"
 	},
 	"author": "Jay Posten",
 	"license": "UNLICENSED",
@@ -17,7 +18,9 @@
 		"not op_mini all"
 	],
 	"dependencies": {
+		"compression": "^1.7.4",
 		"express": "^4.17.1",
+		"helmet": "^3.18.0",
 		"sqlite3": "^4.0.9"
 	},
 	"devDependencies": {

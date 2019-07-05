@@ -1,8 +1,13 @@
 const express = require('express')
+const helmet = require('helmet')
+const compression = require('compression')
+
 const bookmarksRouter = require('./routers/bookmarks')
 
 const server = express()
 
+server.use(helmet())
+server.use(compression())
 server.use(express.json())
 
 // server.use(function(req, res, next) {
