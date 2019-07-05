@@ -1,0 +1,44 @@
+{
+	"extends": [
+		"eslint:recommended"
+	],
+	"parser": "babel-eslint",
+	"env": {
+		"es6": true,
+		"node": true
+	},
+	"parserOptions": {
+		"ecmaVersion": 6,
+		"sourceType": "module",
+		"ecmaFeatures": {
+			"jsx": true
+		}
+	},
+	"rules": {
+		"eol-last": [
+			2,
+			"always"
+		],
+		"indent": [
+			2,
+			"tab",
+			{
+				"SwitchCase": 1
+			}
+		],
+		"no-trailing-spaces": 2,
+		"no-var": 2,
+		"prefer-const": 2,
+		"quotes": [
+			2,
+			"single",
+			{
+				"allowTemplateLiterals": true
+			}
+		],
+		"semi": [
+			2,
+			"never"
+		]
+	}
+}

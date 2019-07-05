@@ -1,12 +1,29 @@
 {
-  "name": "server",
-  "version": "0.0.1",
-  "private": true,
-  "scripts": {
-    "start": "set NODE_ENV=production && node server.js"
-  },
-  "dependencies": {
-    "express": "^4.17.1",
-    "sqlite3": "^4.0.9"
-  }
+	"name": "server",
+	"version": "0.0.1",
+	"description": "Jay's API server for database stuff",
+	"main": "server.js",
+	"private": true,
+	"scripts": {
+		"dev": "cross-env NODE_ENV=development node server.js",
+		"start": "cross-env NODE_ENV=production node server.js"
+	},
+	"author": "Jay Posten",
+	"license": "UNLICENSED",
+	"browserslist": [
+		"> 1%",
+		"not dead",
+		"not ie <= 11",
+		"not op_mini all"
+	],
+	"dependencies": {
+		"express": "^4.17.1",
+		"sqlite3": "^4.0.9"
+	},
+	"devDependencies": {
+		"babel-eslint": "^10.0.2",
+		"cross-env": "^5.2.0",
+		"eslint": "^6.0.1",
+		"eslint-plugin-compat": "^3.2.0"
+	}
 }

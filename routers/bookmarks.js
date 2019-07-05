@@ -3,16 +3,14 @@ const sqlite3 = require('sqlite3')
 
 const bookmarksRouter = express.Router()
 
-bookmarksRouter.get('/read/:category', (req, res) => {
-	const category = req.params.category
-
+bookmarksRouter.get('/read', (req, res) => {
 	const db = new sqlite3.Database('./bookmarks.sqlite', error => {
 		if (error) {
 			console.log(`Error connecting to database: ${error}`)
 		}
 	})
 
-	db.all(`SELECT rowid, * FROM bookmarks WHERE category = '${category}' ORDER BY site`, (error, rows) => {
+	db.all(`SELECT rowid, * FROM bookmarks ORDER BY category`, (error, rows) => {
 		if (error) {
 			res.status(404).send(`Error retrieving bookmarks: ${error}`)
 		} else {
@@ -32,11 +30,11 @@ bookmarksRouter.post('/write', (req, res) => {
 	const category = req.body.category
 
 	if (site.includes('\'')) {
-		site = site.replace(/'/g, "''")
+		site = site.replace(/'/g, '\'\'')
 	}
 
 	if (url.includes('\'')) {
-		url = url.replace(/'/g, "''")
+		url = url.replace(/'/g, '\'\'')
 	}
 
 	const db = new sqlite3.Database('./bookmarks.sqlite', error => {
@@ -60,17 +58,17 @@ bookmarksRouter.post('/write', (req, res) => {
 bookmarksRouter.put('/edit/:rowid', (req, res) => {
 	const rowid = req.params.rowid
 
-	const {
+	let {
 		site,
 		url
 	} = req.body
 
 	if (site.includes('\'')) {
-		site = site.replace(/'/g, "''")
+		site = site.replace(/'/g, '\'\'')
 	}
 
 	if (url.includes('\'')) {
-		url = url.replace(/'/g, "''")
+		url = url.replace(/'/g, '\'\'')
 	}
 
 	const db = new sqlite3.Database('./bookmarks.sqlite', error => {
