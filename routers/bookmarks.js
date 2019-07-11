@@ -3,6 +3,8 @@ const sqlite3 = require('sqlite3')
 
 const bookmarksRouter = express.Router()
 
+const password = '$$jaysnewtabpassword$$'
+
 bookmarksRouter.get('/read', (req, res) => {
 	const db = new sqlite3.Database('./bookmarks.sqlite', error => {
 		if (error) {
@@ -10,8 +12,9 @@ bookmarksRouter.get('/read', (req, res) => {
 		}
 	})
 
-	db.all(`SELECT rowid, * FROM bookmarks ORDER BY category`, (error, rows) => {
+	db.all(`SELECT rowid, * FROM bookmarks ORDER BY category, site`, (error, rows) => {
 		if (error) {
+			console.log(`Error retrieving bookmarks: ${error}`)
 			res.status(404).send(`Error retrieving bookmarks: ${error}`)
 		} else {
 			res.json(rows)
@@ -29,30 +32,34 @@ bookmarksRouter.post('/write', (req, res) => {
 
 	const category = req.body.category
 
-	if (site.includes('\'')) {
-		site = site.replace(/'/g, '\'\'')
-	}
-
-	if (url.includes('\'')) {
-		url = url.replace(/'/g, '\'\'')
-	}
-
-	const db = new sqlite3.Database('./bookmarks.sqlite', error => {
-		if (error) {
-			console.log(`Error connecting to database. ${error}`)
+	if (req.body.password !== password) {
+		res.status(400).send()
+	} else {
+		if (site.includes('\'')) {
+			site = site.replace(/'/g, '\'\'')
 		}
-	})
 
-	db.run(`INSERT INTO bookmarks (site, url, category) VALUES ('${site}', '${url}', '${category}')`, error => {
-		if (error) {
-			console.log(`Error inserting row: ${error}`)
-			res.status(404).send()
-		} else {
-			res.send()
+		if (url.includes('\'')) {
+			url = url.replace(/'/g, '\'\'')
 		}
-	})
 
-	db.close()
+		const db = new sqlite3.Database('./bookmarks.sqlite', error => {
+			if (error) {
+				console.log(`Error connecting to database. ${error}`)
+			}
+		})
+
+		db.run(`INSERT INTO bookmarks (site, url, category) VALUES ('${site}', '${url}', '${category}')`, error => {
+			if (error) {
+				console.log(`Error inserting row: ${error}`)
+				res.status(404).send()
+			} else {
+				res.send()
+			}
+		})
+
+		db.close()
+	}
 })
 
 bookmarksRouter.put('/edit/:rowid', (req, res) => {
@@ -63,51 +70,59 @@ bookmarksRouter.put('/edit/:rowid', (req, res) => {
 		url
 	} = req.body
 
-	if (site.includes('\'')) {
-		site = site.replace(/'/g, '\'\'')
-	}
-
-	if (url.includes('\'')) {
-		url = url.replace(/'/g, '\'\'')
-	}
-
-	const db = new sqlite3.Database('./bookmarks.sqlite', error => {
-		if (error) {
-			console.log(`Error connecting to database. ${error}`)
+	if (req.body.password !== password) {
+		res.status(400).send()
+	} else {
+		if (site.includes('\'')) {
+			site = site.replace(/'/g, '\'\'')
 		}
-	})
 
-	db.run(`UPDATE bookmarks SET site = '${site}', url = '${url}' WHERE rowid = '${rowid}'`, error => {
-		if (error) {
-			console.log(`Error updating row: ${error}`)
-			res.status(404).send()
-		} else {
-			res.send()
+		if (url.includes('\'')) {
+			url = url.replace(/'/g, '\'\'')
 		}
-	})
 
-	db.close()
+		const db = new sqlite3.Database('./bookmarks.sqlite', error => {
+			if (error) {
+				console.log(`Error connecting to database. ${error}`)
+			}
+		})
+
+		db.run(`UPDATE bookmarks SET site = '${site}', url = '${url}' WHERE rowid = '${rowid}'`, error => {
+			if (error) {
+				console.log(`Error updating row: ${error}`)
+				res.status(404).send()
+			} else {
+				res.send()
+			}
+		})
+
+		db.close()
+	}
 })
 
 bookmarksRouter.delete('/delete/:rowid', (req, res) => {
 	const rowid = req.params.rowid
 
-	const db = new sqlite3.Database('./bookmarks.sqlite', error => {
-		if (error) {
-			console.log(`Error connecting to database. ${error}`)
-		}
-	})
+	if (req.body.password !== password) {
+		res.status(400).send()
+	} else {
+		const db = new sqlite3.Database('./bookmarks.sqlite', error => {
+			if (error) {
+				console.log(`Error connecting to database. ${error}`)
+			}
+		})
 
-	db.run(`DELETE FROM bookmarks WHERE rowid = '${rowid}'`, error => {
-		if (error) {
-			console.log(`Error deleting row: ${error}`)
-			res.status(404).send()
-		} else {
-			res.send()
-		}
-	})
+		db.run(`DELETE FROM bookmarks WHERE rowid = '${rowid}'`, error => {
+			if (error) {
+				console.log(`Error deleting row: ${error}`)
+				res.status(404).send()
+			} else {
+				res.send()
+			}
+		})
 
-	db.close()
+		db.close()
+	}
 })
 
 module.exports = bookmarksRouter
