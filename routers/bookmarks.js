@@ -15,7 +15,7 @@ bookmarksRouter.get('/read', (req, res) => {
 	db.all(`SELECT rowid, * FROM bookmarks ORDER BY category, site`, (error, rows) => {
 		if (error) {
 			console.log(`Error retrieving bookmarks: ${error}`)
-			res.status(404).send(`Error retrieving bookmarks: ${error}`)
+			res.status(400).send(`Error retrieving bookmarks: ${error}`)
 		} else {
 			res.json(rows)
 		}
@@ -52,7 +52,7 @@ bookmarksRouter.post('/write', (req, res) => {
 		db.run(`INSERT INTO bookmarks (site, url, category) VALUES ('${site}', '${url}', '${category}')`, error => {
 			if (error) {
 				console.log(`Error inserting row: ${error}`)
-				res.status(404).send()
+				res.status(400).send()
 			} else {
 				res.send()
 			}
@@ -90,7 +90,7 @@ bookmarksRouter.put('/edit/:rowid', (req, res) => {
 		db.run(`UPDATE bookmarks SET site = '${site}', url = '${url}' WHERE rowid = '${rowid}'`, error => {
 			if (error) {
 				console.log(`Error updating row: ${error}`)
-				res.status(404).send()
+				res.status(400).send()
 			} else {
 				res.send()
 			}
@@ -115,7 +115,7 @@ bookmarksRouter.delete('/delete/:rowid', (req, res) => {
 		db.run(`DELETE FROM bookmarks WHERE rowid = '${rowid}'`, error => {
 			if (error) {
 				console.log(`Error deleting row: ${error}`)
-				res.status(404).send()
+				res.status(400).send()
 			} else {
 				res.send()
 			}
