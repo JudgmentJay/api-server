@@ -6,8 +6,8 @@
 	"private": true,
 	"scripts": {
 		"dev": "cross-env NODE_ENV=development node server.js",
-		"start": "pm2 start server --watch --env production",
-		"stop": "pm2 stop server --watch"
+		"start": "pm2 start server.js --watch --env production",
+		"stop": "pm2 stop server.js --watch"
 	},
 	"author": "Jay Posten",
 	"license": "UNLICENSED",
