@@ -82,7 +82,7 @@ gamesRouter.post('/write', (req, res) => {
 			score,
 			playthroughCount,
 			status,
-			newPlaythrough,
+			addNewPlaythrough,
 		} = req.body
 
 		const lastPlaythroughId = null
@@ -98,7 +98,7 @@ gamesRouter.post('/write', (req, res) => {
 				console.log(`Error inserting game row: ${error}`)
 				res.status(400).send()
 			} else {
-				if (newPlaythrough) {
+				if (addNewPlaythrough) {
 					const gameId = this.lastID
 
 					const {
