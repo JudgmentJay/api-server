@@ -12,7 +12,7 @@ gamesRouter.get('/read', (req, res) => {
 		}
 	})
 
-	db.all(`SELECT rowid, * FROM games ORDER BY status`, (error, rows) => {
+	db.all(`SELECT g.rowid, g.*, p.dateStarted, p.dateFinished, p.hoursPlayed, p.platform FROM games g LEFT OUTER JOIN playthroughs p ON g.lastPlaythroughId = p.rowid ORDER BY status`, (error, rows) => {
 		if (error) {
 			console.log(`Error retrieving games: ${error}`)
 			res.status(400).send(`Error retrieving games: ${error}`)
@@ -22,23 +22,15 @@ gamesRouter.get('/read', (req, res) => {
 					playing: [],
 					played: [],
 					backlog: []
-				},
-				playthroughs: []
+				}
 			}
-
-			const playthroughIds = []
 
 			rows.forEach((row) => {
 				row.status = JSON.parse(row.status)
 
-				if (row.lastPlaythroughId) {
-					playthroughIds.push(row.lastPlaythroughId)
-				}
-
 				if (row.status.includes('playing')) {
 					response.games.playing.push(row)
 				}
-
 
 				if (row.status.includes('played')) {
 					response.games.played.push(row)
@@ -49,18 +41,7 @@ gamesRouter.get('/read', (req, res) => {
 				}
 			})
 
-			db.all(`SELECT rowid, * FROM playthroughs WHERE rowid IN (${playthroughIds.join(',')})`, (error, rows) => {
-				if (error) {
-					console.log(`Error retrieving playthroughs: ${error}`)
-					res.status(400).send(`Error retrieving playthroughs: ${error}`)
-				} else {
-					rows.forEach((row) => {
-						response.playthroughs.push(row)
-					})
-
-					res.json(response)
-				}
-			})
+			res.json(response)
 		}
 	})
 
