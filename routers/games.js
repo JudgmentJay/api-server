@@ -131,7 +131,7 @@ gamesRouter.put('/edit/:rowid', (req, res) => {
 			score,
 			playthroughCount,
 			status,
-			addNewPlaythrough,
+			addNewPlaythrough
 		} = req.body
 
 		const db = new sqlite3.Database('./games.sqlite', error => {
@@ -151,7 +151,6 @@ gamesRouter.put('/edit/:rowid', (req, res) => {
 						dateFinished,
 						hoursPlayed,
 						platform,
-						updateLastPlaythroughId
 					} = req.body
 
 					db.run(`INSERT INTO playthroughs (gameId, dateStarted, dateFinished, hoursPlayed, platform) VALUES (${rowid}, '${dateStarted}', '${dateFinished}', ${hoursPlayed}, '${platform}')`, function(error) {
@@ -159,20 +158,16 @@ gamesRouter.put('/edit/:rowid', (req, res) => {
 							console.log(`Error inserting playthrough row: ${error}`)
 							res.status(400).send()
 						} else {
-							if (updateLastPlaythroughId) {
-								const playthroughId = this.lastID
+							const playthroughId = this.lastID
 
-								db.run(`UPDATE games SET lastPlaythroughId = ${playthroughId} WHERE rowid = ${rowid}`, error => {
-									if (error) {
-										console.log(`Error updating game with new playthrough ID: ${error}`)
-										res.status(400).send(`Error updating game with new playthrough ID`)
-									} else {
-										res.send()
-									}
-								})
-							} else {
-								res.send()
-							}
+							db.run(`UPDATE games SET lastPlaythroughId = ${playthroughId} WHERE rowid = ${rowid}`, error => {
+								if (error) {
+									console.log(`Error updating game with new playthrough ID: ${error}`)
+									res.status(400).send(`Error updating game with new playthrough ID`)
+								} else {
+									res.send()
+								}
+							})
 						}
 					})
 				} else {
@@ -185,28 +180,54 @@ gamesRouter.put('/edit/:rowid', (req, res) => {
 	}
 })
 
-gamesRouter.delete('/delete/:rowid', (req, res) => {
-	const rowid = req.params.rowid
-
+gamesRouter.post('/playthrough-add/:gameId', (req, res) => {
 	if (req.body.password !== password) {
 		res.status(400).send()
 	} else {
-		const db = new sqlite3.Database('./bookmarks.sqlite', error => {
+		const gameId = req.params.gameId
+
+		const {
+			dateStarted,
+			dateFinished,
+			hoursPlayed,
+			platform,
+			updateGame,
+			status,
+			currentPlaythroughId,
+			updateLastPlaythroughId
+		} = req.body
+
+		const db = new sqlite3.Database('./games.sqlite', error => {
 			if (error) {
 				console.log(`Error connecting to database. ${error}`)
 			}
 		})
 
-		db.run(`DELETE FROM bookmarks WHERE rowid = '${rowid}'`, error => {
+		db.run(`INSERT INTO playthroughs (gameId, dateStarted, dateFinished, hoursPlayed, platform) VALUES (${gameId}, '${dateStarted}', '${dateFinished}', ${hoursPlayed}, '${platform}')`, function(error) {
 			if (error) {
-				console.log(`Error deleting row: ${error}`)
+				console.log(`Error inserting playthrough row: ${error}`)
 				res.status(400).send()
 			} else {
-				res.send()
+				if (updateGame) {
+					let playthroughId = currentPlaythroughId
+
+					if (updateLastPlaythroughId) {
+						playthroughId = this.lastID
+					}
+
+					db.run(`UPDATE games SET status = '${status}', lastPlaythroughId = ${playthroughId} WHERE rowid = ${gameId}`, error => {
+						if (error) {
+							console.log(`Error updating game with new playthrough ID: ${error}`)
+							res.status(400).send(`Error updating game with new playthrough ID`)
+						} else {
+							res.send()
+						}
+					})
+				} else {
+					res.send()
+				}
 			}
 		})
-
-		db.close()
 	}
 })
 
