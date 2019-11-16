@@ -12,7 +12,7 @@ gamesRouter.get('/read', (req, res) => {
 		}
 	})
 
-	db.all(`SELECT rowid, * FROM games ORDER BY status`, (error, games) => {
+	db.all(`SELECT rowid, * FROM games ORDER BY title`, (error, games) => {
 		if (error) {
 			console.log(`Error retrieving games: ${error}`)
 			res.status(400).send(`Error retrieving games: ${error}`)
@@ -31,6 +31,8 @@ gamesRouter.get('/read', (req, res) => {
 				}
 
 				if (game.status === 'played' || game.status === 'dropped' || game.playthroughCount > 0) {
+					game.hoursPlayed = JSON.parse(game.hoursPlayed)
+
 					response.games.played.push(game)
 				}
 
@@ -46,7 +48,28 @@ gamesRouter.get('/read', (req, res) => {
 	db.close()
 })
 
-gamesRouter.post('/write', (req, res) => {
+gamesRouter.get('/playthroughs/:gameId', (req, res) => {
+	const gameId = req.params.gameId
+
+	const db = new sqlite3.Database('./games.sqlite', error => {
+		if (error) {
+			console.log(`Error connecting to database: ${error}`)
+		}
+	})
+
+	db.all(`SELECT rowid, * FROM playthroughs WHERE gameId = ${gameId} ORDER BY dateStarted`, (error, playthrough) => {
+		if (error) {
+			console.log(`Error retrieving games: ${error}`)
+			res.status(400).send(`Error retrieving games: ${error}`)
+		} else {
+			res.json(playthrough)
+		}
+	})
+
+	db.close()
+})
+
+gamesRouter.post('/add', (req, res) => {
 	if (req.body.password !== password) {
 		res.status(400).send()
 	} else {
@@ -57,12 +80,13 @@ gamesRouter.post('/write', (req, res) => {
 		}
 
 		const {
-			releaseDate,
-			score,
-			playthroughCount,
 			status,
-			addNewPlaythrough,
+			releaseDate,
+			playthroughCount,
+			addPlaythroughData
 		} = req.body
+
+		const score = req.body.score !== 0 ? req.body.score : null
 
 		const db = new sqlite3.Database('./games.sqlite', error => {
 			if (error) {
@@ -75,7 +99,7 @@ gamesRouter.post('/write', (req, res) => {
 				console.log(`Error inserting new game: ${error}`)
 				res.status(400).send(`Error inserting new game: ${error}`)
 			} else {
-				if (addNewPlaythrough) {
+				if (addPlaythroughData) {
 					const gameId = this.lastID
 
 					const {
@@ -83,15 +107,18 @@ gamesRouter.post('/write', (req, res) => {
 						dateFinished,
 						hoursPlayed,
 						platform,
-						hoursPlayedList
 					} = req.body
+
+					const hoursPlayedList = req.body.hoursPlayedList !== '' ? req.body.hoursPlayedList : null
 
 					db.run(`INSERT INTO playthroughs (gameId, dateStarted, dateFinished, hoursPlayed, platform) VALUES (${gameId}, '${dateStarted}', '${dateFinished}', ${hoursPlayed}, '${platform}')`, function(error) {
 						if (error) {
 							console.log(`Error inserting new playthrough: ${error}`)
 							res.status(400).send(`Error inserting new playthrough: ${error}`)
 						} else {
-							db.run(`UPDATE games SET lastDateStarted = '${dateStarted}', lastDateFinished = '${dateFinished}', hoursPlayed = '${hoursPlayedList}' WHERE rowid = ${gameId}`, error => {
+							const playthroughId = this.lastID
+
+							db.run(`UPDATE games SET lastDateStarted = '${dateStarted}', lastDateFinished = '${dateFinished}', hoursPlayed = '${hoursPlayedList}', lastPlaythroughId = ${playthroughId} WHERE rowid = ${gameId}`, error => {
 								if (error) {
 									console.log(`Error updating game with new dates: ${error}`)
 									res.status(400).send(`Error updating game with new dates: ${error}`)
@@ -128,7 +155,7 @@ gamesRouter.put('/edit/:rowid', (req, res) => {
 			score,
 			playthroughCount,
 			status,
-			addNewPlaythrough
+			addPlaythroughData
 		} = req.body
 
 		const db = new sqlite3.Database('./games.sqlite', error => {
@@ -142,12 +169,12 @@ gamesRouter.put('/edit/:rowid', (req, res) => {
 				console.log(`Error updating row: ${error}`)
 				res.status(400).send()
 			} else {
-				if (addNewPlaythrough) {
+				if (addPlaythroughData) {
 					const {
 						dateStarted,
 						dateFinished,
 						hoursPlayed,
-						platform,
+						platform
 					} = req.body
 
 					db.run(`INSERT INTO playthroughs (gameId, dateStarted, dateFinished, hoursPlayed, platform) VALUES (${rowid}, '${dateStarted}', '${dateFinished}', ${hoursPlayed}, '${platform}')`, function(error) {
@@ -157,7 +184,7 @@ gamesRouter.put('/edit/:rowid', (req, res) => {
 						} else {
 							const playthroughId = this.lastID
 
-							db.run(`UPDATE games SET lastPlaythroughId = ${playthroughId} WHERE rowid = ${rowid}`, error => {
+							db.run(`UPDATE games SET lastDateStarted = '${dateStarted}', lastDateFinished = '${dateFinished}', lastPlaythroughId = ${playthroughId} WHERE rowid = ${rowid}`, error => {
 								if (error) {
 									console.log(`Error updating game with new playthrough ID: ${error}`)
 									res.status(400).send(`Error updating game with new playthrough ID: ${error}`)
@@ -177,21 +204,16 @@ gamesRouter.put('/edit/:rowid', (req, res) => {
 	}
 })
 
-gamesRouter.post('/playthrough-add/:gameId', (req, res) => {
+gamesRouter.post('/playthrough-start/:gameId', (req, res) => {
 	if (req.body.password !== password) {
 		res.status(400).send()
 	} else {
 		const gameId = req.params.gameId
 
 		const {
-			dateStarted,
-			dateFinished,
-			hoursPlayed,
-			platform,
-			updateGame,
 			status,
-			currentPlaythroughId,
-			updateLastPlaythroughId
+			dateStarted,
+			platform
 		} = req.body
 
 		const db = new sqlite3.Database('./games.sqlite', error => {
@@ -200,48 +222,41 @@ gamesRouter.post('/playthrough-add/:gameId', (req, res) => {
 			}
 		})
 
-		db.run(`INSERT INTO playthroughs (gameId, dateStarted, dateFinished, hoursPlayed, platform) VALUES (${gameId}, '${dateStarted}', '${dateFinished}', ${hoursPlayed}, '${platform}')`, function(error) {
+		db.run(`INSERT INTO playthroughs (gameId, dateStarted, platform) VALUES (${gameId}, '${dateStarted}', '${platform}')`, function(error) {
 			if (error) {
 				console.log(`Error adding new playthrough: ${error}`)
 				res.status(400).send(`Error adding new playthrough: ${error}`)
 			} else {
-				if (updateGame) {
-					let playthroughId = currentPlaythroughId
+				const playthroughId = this.lastID
 
-					if (updateLastPlaythroughId) {
-						playthroughId = this.lastID
+				db.run(`UPDATE games SET status = '${status}', lastDateStarted = '${dateStarted}', lastPlaythroughId = ${playthroughId} WHERE rowid = ${gameId}`, error => {
+					if (error) {
+						console.log(`Error updating game with new status/playthroughId: ${error}`)
+						res.status(400).send(`Error updating game with new status/playthroughId: ${error}`)
+					} else {
+						res.send()
 					}
-
-					db.run(`UPDATE games SET status = '${status}', lastPlaythroughId = ${playthroughId} WHERE rowid = ${gameId}`, error => {
-						if (error) {
-							console.log(`Error updating game with new status/playthroughId: ${error}`)
-							res.status(400).send(`Error updating game with new status/playthroughId: ${error}`)
-						} else {
-							res.send()
-						}
-					})
-				} else {
-					res.send()
-				}
+				})
 			}
 		})
 	}
 })
 
-gamesRouter.put('/playthrough-edit/:rowid', (req, res) => {
+gamesRouter.put('/playthrough-finish/:playthroughId', (req, res) => {
 	if (req.body.password !== password) {
 		res.status(400).send()
 	} else {
-		const rowid = req.params.rowid
+		const playthroughId = req.params.playthroughId
 
 		const {
 			dateStarted,
 			dateFinished,
-			hoursPlayed,
 			platform,
+			hoursPlayed,
 			gameId,
 			status,
-			playthroughCount
+			playthroughCount,
+			hoursPlayedList
 		} = req.body
 
 		const db = new sqlite3.Database('./games.sqlite', error => {
@@ -250,12 +265,12 @@ gamesRouter.put('/playthrough-edit/:rowid', (req, res) => {
 			}
 		})
 
-		db.run(`UPDATE playthroughs SET dateStarted = '${dateStarted}', dateFinished = '${dateFinished}', hoursPlayed = ${hoursPlayed}, platform = '${platform}' WHERE rowid = '${rowid}'`, error => {
+		db.run(`UPDATE playthroughs SET dateStarted = '${dateStarted}', dateFinished = '${dateFinished}', hoursPlayed = ${hoursPlayed}, platform = '${platform}' WHERE rowid = '${playthroughId}'`, error => {
 			if (error) {
 				console.log(`Error updating playthrough: ${error}`)
 				res.status(400).send(`Error updating playthrough: ${error}`)
 			} else {
-				db.run(`UPDATE games SET status = '${status}', playthroughCount = ${playthroughCount} WHERE rowid = ${gameId}`, error => {
+				db.run(`UPDATE games SET status = '${status}', playthroughCount = ${playthroughCount}, hoursPlayed = '${hoursPlayedList}' WHERE rowid = ${gameId}`, error => {
 					if (error) {
 						console.log(`Error updating game with new status/playthrough count: ${error}`)
 						res.status(400).send(`Error updating game with new status/playthrough count: ${error}`)
