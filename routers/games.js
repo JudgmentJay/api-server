@@ -136,13 +136,15 @@ gamesRouter.get('/read', (req, res) => {
 			}
 
 			games.forEach((game) => {
+				if (game.hoursPlayedList) {
+					game.hoursPlayedList = JSON.parse(game.hoursPlayedList)
+				}
+
 				if (game.status === 'playing') {
 					response.games.playing.push(game)
 				}
 
-				if (game.status === 'played' || game.status === 'dropped' || game.playthroughCount > 0) {
-					game.hoursPlayedList = JSON.parse(game.hoursPlayedList)
-
+				if (game.status === 'dropped' || game.playthroughCount > 0) {
 					response.games.played.push(game)
 				}
 
@@ -196,7 +198,7 @@ gamesRouter.post('/add', (req, res) => {
 				console.log(`Error inserting new game: ${error}`)
 				res.status(400).send(`Error inserting new game: ${error}`)
 			} else {
-				if (req.body.playthroughCount > 0) {
+				if (req.body.playthroughCount > 0 || req.body.status === 'dropped') {
 					const gameId = this.lastID
 
 					const query = generateInsertQuery('playthrough', req.body)
@@ -250,34 +252,6 @@ gamesRouter.put('/edit/:gameId', (req, res) => {
 				res.status(400).send()
 			} else {
 				res.send()
-				// if (addPlaythroughData) {
-				// 	const {
-				// 		dateStarted,
-				// 		dateFinished,
-				// 		hoursPlayed,
-				// 		platform
-				// 	} = req.body
-
-				// 	db.run(`INSERT INTO playthroughs (gameId, dateStarted, dateFinished, hoursPlayed, platform) VALUES (${rowid}, '${dateStarted}', '${dateFinished}', ${hoursPlayed}, '${platform}')`, function(error) {
-				// 		if (error) {
-				// 			console.log(`Error inserting new playthrough: ${error}`)
-				// 			res.status(400).send(`Error inserting new playthrough: ${error}`)
-				// 		} else {
-				// 			const playthroughId = this.lastID
-
-				// 			db.run(`UPDATE games SET lastDateStarted = '${dateStarted}', lastDateFinished = '${dateFinished}', lastPlaythroughId = ${playthroughId} WHERE rowid = ${rowid}`, error => {
-				// 				if (error) {
-				// 					console.log(`Error updating game with new playthrough ID: ${error}`)
-				// 					res.status(400).send(`Error updating game with new playthrough ID: ${error}`)
-				// 				} else {
-				// 					res.send()
-				// 				}
-				// 			})
-				// 		}
-				// 	})
-				// } else {
-				// 	res.send()
-				// }
 			}
 		})
 
