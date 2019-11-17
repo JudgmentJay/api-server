@@ -5,20 +5,22 @@ const gamesRouter = express.Router()
 
 const password = '$$jaysnewtabpassword$$'
 
-const generateInsertQuery = (data) => {
-	const numberFields = [
-		'gameId',
-		'score',
-		'playthroughCount',
-		'hoursPlayed'
-	]
+const numberFields = [
+	'gameId',
+	'lastPlaythroughId',
+	'score',
+	'playthroughCount',
+	'hoursPlayed',
+	'completed'
+]
 
+const generateInsertQuery = (data) => {
 	const dataEntries = Object.entries(data)
 
 	const fieldsToAdd = []
 
 	dataEntries.forEach((param) => {
-		if (param[1] !== '') {
+		if (param[1]) {
 			if (param[0] === 'title') {
 				if (param[1].includes('\'')) {
 					param[1] = param[1].replace(/'/g, '\'\'')
@@ -41,19 +43,12 @@ const generateInsertQuery = (data) => {
 }
 
 const generateUpdateQuery = (data) => {
-	const numberFields = [
-		'lastPlaythroughId',
-		'score',
-		'playthroughCount',
-		'hoursPlayed'
-	]
-
 	const dataEntries = Object.entries(data)
 
 	const fieldsToUpdate = []
 
 	dataEntries.forEach((param) => {
-		if (param[1] !== '') {
+		if (param[1]) {
 			if (param[0] === 'title') {
 				if (param[1].includes('\'')) {
 					param[1] = param[1].replace(/'/g, '\'\'')
@@ -131,7 +126,7 @@ gamesRouter.get('/:gameId/playthroughs', (req, res) => {
 			console.log(`Error retrieving games: ${error}`)
 			res.status(400).send(`Error retrieving games: ${error}`)
 		} else {
-			playthroughs.sort((playthroughA, playthroughB) => new Date(playthroughA) - new Date(playthroughB))
+			playthroughs.sort((playthroughA, playthroughB) => new Date(playthroughA.dateStarted) - new Date(playthroughB.dateStarted))
 
 			res.json(playthroughs)
 		}
@@ -148,7 +143,7 @@ gamesRouter.post('/add', (req, res) => {
 			title: req.body.title,
 			status: req.body.status,
 			releaseDate: req.body.releaseDate,
-			score: req.body.score ? req.body.score : '',
+			score: req.body.score,
 			playthroughCount: req.body.playthroughCount
 		}
 
@@ -171,9 +166,10 @@ gamesRouter.post('/add', (req, res) => {
 					const playthroughData = {
 						gameId,
 						dateStarted: req.body.dateStarted,
-						dateFinished: req.body.dateFinished ? req.body.dateFinished : '',
-						hoursPlayed: req.body.hoursPlayed ? req.body.hoursPlayed : '',
-						platform: req.body.platform
+						dateFinished: req.body.dateFinished,
+						hoursPlayed: req.body.hoursPlayed,
+						platform: req.body.platform,
+						completed: req.body.completed ? req.body.completed : ''
 					}
 
 					const query = generateInsertQuery(playthroughData)
@@ -186,7 +182,7 @@ gamesRouter.post('/add', (req, res) => {
 							const gameUpdateData = {
 								lastPlaythroughId: this.lastID,
 								lastDateStarted: req.body.dateStarted,
-								lastDateFinished: req.body.dateFinished ? req.body.dateFinished : '',
+								lastDateFinished: req.body.dateFinished,
 								hoursPlayedList: req.body.hoursPlayedList ? req.body.hoursPlayedList : ''
 							}
 
@@ -225,7 +221,7 @@ gamesRouter.put('/:gameId/edit', (req, res) => {
 		const gameData = {
 			title: req.body.title,
 			releaseDate: req.body.releaseDate,
-			score: req.body.score ? req.body.score : '',
+			score: req.body.score,
 			playthroughCount: req.body.playthroughCount
 		}
 
@@ -302,7 +298,8 @@ gamesRouter.put('/:gameId/playthrough-finish', (req, res) => {
 			dateStarted: req.body.dateStarted,
 			dateFinished: req.body.dateFinished,
 			hoursPlayed: req.body.hoursPlayed,
-			platform: req.body.platform
+			platform: req.body.platform,
+			completed: req.body.completed
 		}
 
 		const setString = generateUpdateQuery(playthroughData)
@@ -352,7 +349,8 @@ gamesRouter.post('/:gameId/playthrough-add', (req, res) => {
 			dateStarted: req.body.dateStarted,
 			dateFinished: req.body.dateFinished,
 			hoursPlayed: req.body.hoursPlayed,
-			platform: req.body.platform
+			platform: req.body.platform,
+			completed: req.body.completed
 		}
 
 		const query = generateInsertQuery(playthroughData)
@@ -363,6 +361,7 @@ gamesRouter.post('/:gameId/playthrough-add', (req, res) => {
 				res.status(400).send(`Error adding new playthrough: ${error}`)
 			} else {
 				const gameUpdateData = {
+					status: req.body.status,
 					playthroughCount: req.body.playthroughCount,
 					hoursPlayedList: req.body.hoursPlayedList
 				}
