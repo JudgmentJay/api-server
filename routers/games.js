@@ -7,66 +7,46 @@ const password = '$$jaysnewtabpassword$$'
 
 const numberFields = [
 	'gameId',
-	'lastPlaythroughId',
 	'score',
-	'playthroughCount',
+	'playing',
 	'hoursPlayed',
-	'completed'
+	'timesCompleted'
 ]
 
-const generateInsertQuery = (data) => {
+const generateQuery = (type, data) => {
 	const dataEntries = Object.entries(data)
 
-	const fieldsToAdd = []
+	const queryParams = []
 
-	dataEntries.forEach((param) => {
-		if (param[1]) {
-			if (param[0] === 'title') {
-				if (param[1].includes('\'')) {
-					param[1] = param[1].replace(/'/g, '\'\'')
+	dataEntries.forEach((dataItem) => {
+		if (typeof dataItem[1] !== 'undefined' && dataItem[1] !== '') {
+			if (dataItem[0] === 'title') {
+				if (dataItem[1].includes('\'')) {
+					dataItem[1] = dataItem[1].replace(/'/g, '\'\'')
 				}
 			}
 
-			fieldsToAdd.push({
-				field: param[0],
-				value: numberFields.includes[param[0]] ? parseInt(param[1]) : param[1]
+			queryParams.push({
+				field: dataItem[0],
+				value: numberFields.includes[dataItem[0]] ? parseInt(dataItem[1]) : dataItem[1]
 			})
 		}
 	})
 
-	const fields = fieldsToAdd.map((field) => field.field).join(', ')
-	const values = fieldsToAdd.map((field) => {
-		return typeof field.value === 'string' ? `'${field.value}'` : field.value
-	}).join(', ')
+	if (type === 'insert') {
+		const fields = queryParams.map((param) => param.field).join(', ')
+		const values = queryParams.map((param) => {
+			return typeof param.value === 'string' ? `'${param.value}'` : param.value
+		}).join(', ')
 
-	return {fields, values}
-}
+		return {fields, values}
+	} else {
+		const setString = queryParams.map((param) => {
+			return `${param.field} = ${typeof param.value === 'string' ? `'${param.value}'` : param.value }`
+		}).join(', ')
 
-const generateUpdateQuery = (data) => {
-	const dataEntries = Object.entries(data)
-
-	const fieldsToUpdate = []
-
-	dataEntries.forEach((param) => {
-		if (param[1]) {
-			if (param[0] === 'title') {
-				if (param[1].includes('\'')) {
-					param[1] = param[1].replace(/'/g, '\'\'')
-				}
-			}
-
-			fieldsToUpdate.push({
-				field: param[0],
-				value: numberFields.includes[param[0]] ? parseInt(param[1]) : param[1]
-			})
-		}
-	})
-
-	const setString = fieldsToUpdate.map((field) => {
-		return `${field.field} = ${typeof field.value === 'string' ? `'${field.value}'` : field.value }`
-	}).join(', ')
-
-	return setString
+		return setString
+	}
 }
 
 gamesRouter.get('/all', (req, res) => {
@@ -76,59 +56,27 @@ gamesRouter.get('/all', (req, res) => {
 		}
 	})
 
-	db.all(`SELECT rowid AS id, * FROM games ORDER BY title`, (error, games) => {
+	db.all(`SELECT rowid AS id, * FROM playthroughs ORDER BY dateFinished`, (error, playthroughs) => {
 		if (error) {
-			console.log(`Error retrieving games: ${error}`)
-			res.status(400).send(`Error retrieving games: ${error}`)
+			console.log(`Error retrieving playthroughs: ${error}`)
+			res.status(400).send(`Error retrieving playthroughs: ${error}`)
 		} else {
-			const response = {
-				games: {
-					playing: [],
-					played: [],
-					backlog: []
-				}
-			}
+			db.all(`SELECT rowid AS id, * FROM games ORDER BY title`, (error, games) => {
+				if (error) {
+					console.log(`Error retrieving games: ${error}`)
+					res.status(400).send(`Error retrieving games: ${error}`)
+				} else {
+					games.forEach((game) => {
+						const gamePlaythroughs = playthroughs.filter((playthrough) => {
+							return playthrough.gameId === game.id
+						}).sort((playthroughA, playthroughB) => new Date(playthroughB.dateStarted) - new Date(playthroughA.dateStarted))
 
-			games.forEach((game) => {
-				if (game.hoursPlayedList) {
-					game.hoursPlayedList = JSON.parse(game.hoursPlayedList)
-				}
+						game.playthroughs = gamePlaythroughs
+					})
 
-				if (game.status === 'playing') {
-					response.games.playing.push(game)
-				}
-
-				if (game.status === 'dropped' || game.playthroughCount > 0) {
-					response.games.played.push(game)
-				}
-
-				if (game.status === 'backlog') {
-					response.games.backlog.push(game)
+					res.json(games)
 				}
 			})
-
-			res.json(response)
-		}
-	})
-
-	db.close()
-})
-
-gamesRouter.get('/:gameId/playthroughs', (req, res) => {
-	const db = new sqlite3.Database('./games.sqlite', error => {
-		if (error) {
-			console.log(`Error connecting to database: ${error}`)
-		}
-	})
-
-	db.all(`SELECT rowid AS id, * FROM playthroughs WHERE gameId = ${req.params.gameId}`, (error, playthroughs) => {
-		if (error) {
-			console.log(`Error retrieving games: ${error}`)
-			res.status(400).send(`Error retrieving games: ${error}`)
-		} else {
-			playthroughs.sort((playthroughA, playthroughB) => new Date(playthroughA.dateStarted) - new Date(playthroughB.dateStarted))
-
-			res.json(playthroughs)
 		}
 	})
 
@@ -141,26 +89,25 @@ gamesRouter.post('/add', (req, res) => {
 	} else {
 		const gameData = {
 			title: req.body.title,
-			status: req.body.status,
 			releaseDate: req.body.releaseDate,
 			score: req.body.score,
-			playthroughCount: req.body.playthroughCount
+			playing: req.body.playing
 		}
 
-		const query = generateInsertQuery(gameData)
+		const query = generateQuery('insert', gameData)
 
 		const db = new sqlite3.Database('./games.sqlite', error => {
 			if (error) {
-				console.log(`Error connecting to database. ${error}`)
+				console.log(`Error connecting to database: ${error}`)
 			}
 		})
 
 		db.run(`INSERT INTO games (${query.fields}) VALUES (${query.values})`, function(error) {
 			if (error) {
-				console.log(`Error inserting new game: ${error}`)
-				res.status(400).send(`Error inserting new game: ${error}`)
+				console.log(`Error adding new game: ${error}`)
+				res.status(400).send(`Error adding new game: ${error}`)
 			} else {
-				if (req.body.status !== 'backlog') {
+				if (req.body.dateStarted) {
 					const gameId = this.lastID
 
 					const playthroughData = {
@@ -168,34 +115,18 @@ gamesRouter.post('/add', (req, res) => {
 						dateStarted: req.body.dateStarted,
 						dateFinished: req.body.dateFinished,
 						hoursPlayed: req.body.hoursPlayed,
-						platform: req.body.platform,
-						completed: req.body.completed ? req.body.completed : ''
+						timesCompleted: req.body.timesCompleted,
+						platform: req.body.platform
 					}
 
-					const query = generateInsertQuery(playthroughData)
+					const query = generateQuery('insert', playthroughData)
 
 					db.run(`INSERT INTO playthroughs (${query.fields}) VALUES (${query.values})`, function(error) {
 						if (error) {
-							console.log(`Error inserting new playthrough: ${error}`)
-							res.status(400).send(`Error inserting new playthrough: ${error}`)
+							console.log(`Error adding new game playthrough: ${error}`)
+							res.status(400).send(`Error adding new game playthrough: ${error}`)
 						} else {
-							const gameUpdateData = {
-								lastPlaythroughId: this.lastID,
-								lastDateStarted: req.body.dateStarted,
-								lastDateFinished: req.body.dateFinished,
-								hoursPlayedList: req.body.hoursPlayedList ? req.body.hoursPlayedList : ''
-							}
-
-							const setString = generateUpdateQuery(gameUpdateData)
-
-							db.run(`UPDATE games SET ${setString} WHERE rowid = ${gameId}`, error => {
-								if (error) {
-									console.log(`Error updating game with new dates: ${error}`)
-									res.status(400).send(`Error updating game with new dates: ${error}`)
-								} else {
-									res.send()
-								}
-							})
+							res.send()
 						}
 					})
 				} else {
@@ -208,24 +139,23 @@ gamesRouter.post('/add', (req, res) => {
 	}
 })
 
-gamesRouter.put('/:gameId/edit', (req, res) => {
+gamesRouter.put('/edit/:gameId', (req, res) => {
 	if (req.body.password !== password) {
 		res.status(400).send()
 	} else {
 		const db = new sqlite3.Database('./games.sqlite', error => {
 			if (error) {
-				console.log(`Error connecting to database. ${error}`)
+				console.log(`Error connecting to database: ${error}`)
 			}
 		})
 
 		const gameData = {
 			title: req.body.title,
 			releaseDate: req.body.releaseDate,
-			score: req.body.score,
-			playthroughCount: req.body.playthroughCount
+			score: req.body.score
 		}
 
-		const setString = generateUpdateQuery(gameData)
+		const setString = generateQuery('update', gameData)
 
 		db.run(`UPDATE games SET ${setString} WHERE rowid = '${req.params.gameId}'`, error => {
 			if (error) {
@@ -240,13 +170,13 @@ gamesRouter.put('/:gameId/edit', (req, res) => {
 	}
 })
 
-gamesRouter.post('/:gameId/playthrough-start', (req, res) => {
+gamesRouter.post('/playthrough-start/:gameId', (req, res) => {
 	if (req.body.password !== password) {
 		res.status(400).send()
 	} else {
 		const db = new sqlite3.Database('./games.sqlite', error => {
 			if (error) {
-				console.log(`Error connecting to database. ${error}`)
+				console.log(`Error connecting to database: ${error}`)
 			}
 		})
 
@@ -256,25 +186,17 @@ gamesRouter.post('/:gameId/playthrough-start', (req, res) => {
 			platform: req.body.platform
 		}
 
-		const query = generateInsertQuery(playthroughData)
+		const query = generateQuery('insert', playthroughData)
 
 		db.run(`INSERT INTO playthroughs (${query.fields}) VALUES (${query.values})`, function(error) {
 			if (error) {
-				console.log(`Error adding new playthrough: ${error}`)
-				res.status(400).send(`Error adding new playthrough: ${error}`)
+				console.log(`Error starting new playthrough: ${error}`)
+				res.status(400).send(`Error starting new playthrough: ${error}`)
 			} else {
-				const gameUpdateData = {
-					status: 'playing',
-					lastDateStarted: req.body.dateStarted,
-					lastPlaythroughId: this.lastID
-				}
-
-				const setString = generateUpdateQuery(gameUpdateData)
-
-				db.run(`UPDATE games SET ${setString} WHERE rowid = ${req.params.gameId}`, error => {
+				db.run(`UPDATE games SET playing = 1 WHERE rowid = ${req.params.gameId}`, error => {
 					if (error) {
-						console.log(`Error updating game with new status/playthroughId: ${error}`)
-						res.status(400).send(`Error updating game with new status/playthroughId: ${error}`)
+						console.log(`Error setting game to playing: ${error}`)
+						res.status(400).send(`Error setting game to playing: ${error}`)
 					} else {
 						res.send()
 					}
@@ -284,13 +206,13 @@ gamesRouter.post('/:gameId/playthrough-start', (req, res) => {
 	}
 })
 
-gamesRouter.put('/:gameId/playthrough-finish', (req, res) => {
+gamesRouter.put('/playthrough-finish/:playthroughId', (req, res) => {
 	if (req.body.password !== password) {
 		res.status(400).send()
 	} else {
 		const db = new sqlite3.Database('./games.sqlite', error => {
 			if (error) {
-				console.log(`Error connecting to database. ${error}`)
+				console.log(`Error connecting to database: ${error}`)
 			}
 		})
 
@@ -298,31 +220,21 @@ gamesRouter.put('/:gameId/playthrough-finish', (req, res) => {
 			dateStarted: req.body.dateStarted,
 			dateFinished: req.body.dateFinished,
 			hoursPlayed: req.body.hoursPlayed,
-			platform: req.body.platform,
-			completed: req.body.completed
+			timesCompleted: req.body.timesCompleted,
+			platform: req.body.platform
 		}
 
-		const setString = generateUpdateQuery(playthroughData)
+		const setString = generateQuery('update', playthroughData)
 
-		db.run(`UPDATE playthroughs SET ${setString} WHERE rowid = '${req.body.playthroughId}'`, error => {
+		db.run(`UPDATE playthroughs SET ${setString} WHERE rowid = '${req.params.playthroughId}'`, error => {
 			if (error) {
-				console.log(`Error updating playthrough: ${error}`)
-				res.status(400).send(`Error updating playthrough: ${error}`)
+				console.log(`Error finishing playthrough: ${error}`)
+				res.status(400).send(`Error finishing playthrough: ${error}`)
 			} else {
-				const gameUpdateData = {
-					status: req.body.status,
-					playthroughCount: req.body.playthroughCount,
-					lastDateStarted: req.body.dateStarted,
-					lastDateFinished: req.body.dateFinished,
-					hoursPlayedList: req.body.hoursPlayedList
-				}
-
-				const setString = generateUpdateQuery(gameUpdateData)
-
-				db.run(`UPDATE games SET ${setString} WHERE rowid = ${req.params.gameId}`, error => {
+				db.run(`UPDATE games SET playing = 0 WHERE rowid = ${req.body.gameId}`, error => {
 					if (error) {
-						console.log(`Error updating game with new status/playthrough count: ${error}`)
-						res.status(400).send(`Error updating game with new status/playthrough count: ${error}`)
+						console.log(`Error setting game to not playing: ${error}`)
+						res.status(400).send(`Error setting game to not playing: ${error}`)
 					} else {
 						res.send()
 					}
@@ -334,13 +246,13 @@ gamesRouter.put('/:gameId/playthrough-finish', (req, res) => {
 	}
 })
 
-gamesRouter.post('/:gameId/playthrough-add', (req, res) => {
+gamesRouter.post('/playthrough-add/:gameId', (req, res) => {
 	if (req.body.password !== password) {
 		res.status(400).send()
 	} else {
 		const db = new sqlite3.Database('./games.sqlite', error => {
 			if (error) {
-				console.log(`Error connecting to database. ${error}`)
+				console.log(`Error connecting to database: ${error}`)
 			}
 		})
 
@@ -349,33 +261,18 @@ gamesRouter.post('/:gameId/playthrough-add', (req, res) => {
 			dateStarted: req.body.dateStarted,
 			dateFinished: req.body.dateFinished,
 			hoursPlayed: req.body.hoursPlayed,
-			platform: req.body.platform,
-			completed: req.body.completed
+			timesCompleted: req.body.timesCompleted,
+			platform: req.body.platform
 		}
 
-		const query = generateInsertQuery(playthroughData)
+		const query = generateQuery('insert', playthroughData)
 
 		db.run(`INSERT INTO playthroughs (${query.fields}) VALUES (${query.values})`, function(error) {
 			if (error) {
 				console.log(`Error adding new playthrough: ${error}`)
 				res.status(400).send(`Error adding new playthrough: ${error}`)
 			} else {
-				const gameUpdateData = {
-					status: req.body.status,
-					playthroughCount: req.body.playthroughCount,
-					hoursPlayedList: req.body.hoursPlayedList
-				}
-
-				const setString = generateUpdateQuery(gameUpdateData)
-
-				db.run(`UPDATE games SET ${setString} WHERE rowid = ${req.params.gameId}`, error => {
-					if (error) {
-						console.log(`Error updating game with new status/playthroughId: ${error}`)
-						res.status(400).send(`Error updating game with new status/playthroughId: ${error}`)
-					} else {
-						res.send()
-					}
-				})
+				res.send()
 			}
 		})
 	}
