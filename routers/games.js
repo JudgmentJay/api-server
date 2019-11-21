@@ -72,6 +72,16 @@ gamesRouter.get('/all', (req, res) => {
 						}).sort((playthroughA, playthroughB) => new Date(playthroughB.dateStarted) - new Date(playthroughA.dateStarted))
 
 						game.playthroughs = gamePlaythroughs
+
+						if (game.playthroughs.length > 0) {
+							let hoursPlayed = 0
+
+							game.playthroughs.forEach((playthrough) => {
+								hoursPlayed += playthrough.hoursPlayed
+							})
+
+							game.hoursPlayed = hoursPlayed
+						}
 					})
 
 					res.json(games)
