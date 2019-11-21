@@ -61,6 +61,8 @@ gamesRouter.get('/all', (req, res) => {
 			console.log(`Error retrieving playthroughs: ${error}`)
 			res.status(400).send(`Error retrieving playthroughs: ${error}`)
 		} else {
+			playthroughs = playthroughs.sort((playthroughA, playthroughB) => new Date(playthroughB.dateStarted) - new Date(playthroughA.dateStarted))
+
 			db.all(`SELECT rowid AS id, * FROM games ORDER BY title`, (error, games) => {
 				if (error) {
 					console.log(`Error retrieving games: ${error}`)
@@ -69,7 +71,7 @@ gamesRouter.get('/all', (req, res) => {
 					games.forEach((game) => {
 						const gamePlaythroughs = playthroughs.filter((playthrough) => {
 							return playthrough.gameId === game.id
-						}).sort((playthroughA, playthroughB) => new Date(playthroughB.dateStarted) - new Date(playthroughA.dateStarted))
+						})
 
 						game.playthroughs = gamePlaythroughs
 
@@ -84,7 +86,12 @@ gamesRouter.get('/all', (req, res) => {
 						}
 					})
 
-					res.json(games)
+					const dataToSend = {
+						games,
+						playthroughs
+					}
+
+					res.json(dataToSend)
 				}
 			})
 		}
