@@ -59,14 +59,14 @@ gamesRouter.get('/all', (req, res) => {
 	db.all(`SELECT rowid AS id, * FROM playthroughs ORDER BY dateFinished`, (error, playthroughs) => {
 		if (error) {
 			console.log(`Error retrieving playthroughs: ${error}`)
-			res.status(400).send(`Error retrieving playthroughs: ${error}`)
+			res.status(404).send(`Error retrieving playthroughs: ${error}`)
 		} else {
 			playthroughs = playthroughs.sort((playthroughA, playthroughB) => new Date(playthroughB.dateStarted) - new Date(playthroughA.dateStarted))
 
 			db.all(`SELECT rowid AS id, * FROM games ORDER BY title`, (error, games) => {
 				if (error) {
 					console.log(`Error retrieving games: ${error}`)
-					res.status(400).send(`Error retrieving games: ${error}`)
+					res.status(404).send(`Error retrieving games: ${error}`)
 				} else {
 					games.forEach((game) => {
 						const gamePlaythroughs = playthroughs.filter((playthrough) => {
@@ -122,7 +122,7 @@ gamesRouter.post('/add', (req, res) => {
 		db.run(`INSERT INTO games (${query.fields}) VALUES (${query.values})`, function(error) {
 			if (error) {
 				console.log(`Error adding new game: ${error}`)
-				res.status(400).send(`Error adding new game: ${error}`)
+				res.status(404).send(`Error adding new game: ${error}`)
 			} else {
 				if (req.body.dateStarted) {
 					const gameId = this.lastID
@@ -141,7 +141,7 @@ gamesRouter.post('/add', (req, res) => {
 					db.run(`INSERT INTO playthroughs (${query.fields}) VALUES (${query.values})`, function(error) {
 						if (error) {
 							console.log(`Error adding new game playthrough: ${error}`)
-							res.status(400).send(`Error adding new game playthrough: ${error}`)
+							res.status(404).send(`Error adding new game playthrough: ${error}`)
 						} else {
 							res.send()
 						}
@@ -177,7 +177,7 @@ gamesRouter.put('/edit/:gameId', (req, res) => {
 		db.run(`UPDATE games SET ${setString} WHERE rowid = '${req.params.gameId}'`, error => {
 			if (error) {
 				console.log(`Error updating row: ${error}`)
-				res.status(400).send()
+				res.status(404).send()
 			} else {
 				res.send()
 			}
@@ -208,12 +208,12 @@ gamesRouter.post('/playthrough-start/:gameId', (req, res) => {
 		db.run(`INSERT INTO playthroughs (${query.fields}) VALUES (${query.values})`, function(error) {
 			if (error) {
 				console.log(`Error starting new playthrough: ${error}`)
-				res.status(400).send(`Error starting new playthrough: ${error}`)
+				res.status(404).send(`Error starting new playthrough: ${error}`)
 			} else {
 				db.run(`UPDATE games SET playing = 1 WHERE rowid = ${req.params.gameId}`, error => {
 					if (error) {
 						console.log(`Error setting game to playing: ${error}`)
-						res.status(400).send(`Error setting game to playing: ${error}`)
+						res.status(404).send(`Error setting game to playing: ${error}`)
 					} else {
 						res.send()
 					}
@@ -246,12 +246,12 @@ gamesRouter.put('/playthrough-finish/:playthroughId', (req, res) => {
 		db.run(`UPDATE playthroughs SET ${setString} WHERE rowid = '${req.params.playthroughId}'`, error => {
 			if (error) {
 				console.log(`Error finishing playthrough: ${error}`)
-				res.status(400).send(`Error finishing playthrough: ${error}`)
+				res.status(404).send(`Error finishing playthrough: ${error}`)
 			} else {
 				db.run(`UPDATE games SET playing = 0 WHERE rowid = ${req.body.gameId}`, error => {
 					if (error) {
 						console.log(`Error setting game to not playing: ${error}`)
-						res.status(400).send(`Error setting game to not playing: ${error}`)
+						res.status(404).send(`Error setting game to not playing: ${error}`)
 					} else {
 						res.send()
 					}
@@ -287,7 +287,7 @@ gamesRouter.post('/playthrough-add/:gameId', (req, res) => {
 		db.run(`INSERT INTO playthroughs (${query.fields}) VALUES (${query.values})`, function(error) {
 			if (error) {
 				console.log(`Error adding new playthrough: ${error}`)
-				res.status(400).send(`Error adding new playthrough: ${error}`)
+				res.status(404).send(`Error adding new playthrough: ${error}`)
 			} else {
 				res.send()
 			}
