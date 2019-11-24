@@ -74,16 +74,6 @@ gamesRouter.get('/all', (req, res) => {
 						})
 
 						game.playthroughs = gamePlaythroughs
-
-						if (game.playthroughs.length > 0) {
-							let hoursPlayed = 0
-
-							game.playthroughs.forEach((playthrough) => {
-								hoursPlayed += playthrough.hoursPlayed
-							})
-
-							game.hoursPlayed = hoursPlayed
-						}
 					})
 
 					const dataToSend = {
