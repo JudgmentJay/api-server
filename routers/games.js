@@ -238,7 +238,13 @@ gamesRouter.put('/playthrough-finish/:playthroughId', (req, res) => {
 				console.log(`Error finishing playthrough: ${error}`)
 				res.status(404).send(`Error finishing playthrough: ${error}`)
 			} else {
-				db.run(`UPDATE games SET playing = 0 WHERE rowid = ${req.body.gameId}`, error => {
+				const gameData = {
+					score: req.body.score
+				}
+
+				const setString = generateQuery('update', gameData)
+
+				db.run(`UPDATE games SET playing = 0, ${setString} WHERE rowid = ${req.body.gameId}`, error => {
 					if (error) {
 						console.log(`Error setting game to not playing: ${error}`)
 						res.status(404).send(`Error setting game to not playing: ${error}`)
