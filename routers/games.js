@@ -166,7 +166,30 @@ gamesRouter.put('/edit/:gameId', (req, res) => {
 
 		db.run(`UPDATE games SET ${setString} WHERE rowid = '${req.params.gameId}'`, error => {
 			if (error) {
-				console.log(`Error updating row: ${error}`)
+				console.log(`Error updating game: ${error}`)
+				res.status(404).send()
+			} else {
+				res.send()
+			}
+		})
+
+		db.close()
+	}
+})
+
+gamesRouter.delete('/delete/:gameId', (req, res) => {
+	if (req.body.password !== password) {
+		res.status(400).send()
+	} else {
+		const db = new sqlite3.Database('./games.sqlite', error => {
+			if (error) {
+				console.log(`Error connecting to database: ${error}`)
+			}
+		})
+
+		db.run(`DELETE FROM games WHERE rowid = '${req.params.gameId}'`, error => {
+			if (error) {
+				console.log(`Error deleting game: ${error}`)
 				res.status(404).send()
 			} else {
 				res.send()
