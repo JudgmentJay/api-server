@@ -200,7 +200,7 @@ gamesRouter.delete('/delete/:gameId', (req, res) => {
 	}
 })
 
-gamesRouter.post('/playthrough-start/:gameId', (req, res) => {
+gamesRouter.post('/playthroughs/start/:gameId', (req, res) => {
 	if (req.body.password !== password) {
 		res.status(400).send()
 	} else {
@@ -236,7 +236,7 @@ gamesRouter.post('/playthrough-start/:gameId', (req, res) => {
 	}
 })
 
-gamesRouter.put('/playthrough-finish/:playthroughId', (req, res) => {
+gamesRouter.put('/playthroughs/finish/:playthroughId', (req, res) => {
 	if (req.body.password !== password) {
 		res.status(400).send()
 	} else {
@@ -282,7 +282,39 @@ gamesRouter.put('/playthrough-finish/:playthroughId', (req, res) => {
 	}
 })
 
-gamesRouter.post('/playthrough-edit/:playthroughId', (req, res) => {
+gamesRouter.post('/playthroughs/add/:gameId', (req, res) => {
+	if (req.body.password !== password) {
+		res.status(400).send()
+	} else {
+		const db = new sqlite3.Database('./games.sqlite', error => {
+			if (error) {
+				console.log(`Error connecting to database: ${error}`)
+			}
+		})
+
+		const playthroughData = {
+			gameId: req.params.gameId,
+			dateStarted: req.body.dateStarted,
+			dateFinished: req.body.dateFinished,
+			hoursPlayed: req.body.hoursPlayed,
+			timesCompleted: req.body.timesCompleted,
+			platform: req.body.platform
+		}
+
+		const query = generateQuery('insert', playthroughData)
+
+		db.run(`INSERT INTO playthroughs (${query.fields}) VALUES (${query.values})`, function(error) {
+			if (error) {
+				console.log(`Error adding new playthrough: ${error}`)
+				res.status(404).send(`Error adding new playthrough: ${error}`)
+			} else {
+				res.send()
+			}
+		})
+	}
+})
+
+gamesRouter.put('/playthroughs/edit/:playthroughId', (req, res) => {
 	if (req.body.password !== password) {
 		res.status(400).send()
 	} else {
@@ -313,7 +345,7 @@ gamesRouter.post('/playthrough-edit/:playthroughId', (req, res) => {
 	}
 })
 
-gamesRouter.post('/playthrough-add/:gameId', (req, res) => {
+gamesRouter.delete('/playthroughs/delete/:playthroughId', (req, res) => {
 	if (req.body.password !== password) {
 		res.status(400).send()
 	} else {
@@ -323,21 +355,10 @@ gamesRouter.post('/playthrough-add/:gameId', (req, res) => {
 			}
 		})
 
-		const playthroughData = {
-			gameId: req.params.gameId,
-			dateStarted: req.body.dateStarted,
-			dateFinished: req.body.dateFinished,
-			hoursPlayed: req.body.hoursPlayed,
-			timesCompleted: req.body.timesCompleted,
-			platform: req.body.platform
-		}
-
-		const query = generateQuery('insert', playthroughData)
-
-		db.run(`INSERT INTO playthroughs (${query.fields}) VALUES (${query.values})`, function(error) {
+		db.run(`DELETE FROM playthroughs WHERE rowid = ${req.params.playthroughId}`, function(error) {
 			if (error) {
-				console.log(`Error adding new playthrough: ${error}`)
-				res.status(404).send(`Error adding new playthrough: ${error}`)
+				console.log(`Error deleting playthrough: ${error}`)
+				res.status(404).send(`Error deleting playthrough: ${error}`)
 			} else {
 				res.send()
 			}
