@@ -63,7 +63,7 @@ gamesRouter.get('/all', (req, res) => {
 		} else {
 			playthroughs = playthroughs.sort((playthroughA, playthroughB) => new Date(playthroughB.dateStarted) - new Date(playthroughA.dateStarted))
 
-			db.all(`SELECT rowid AS id, * FROM games ORDER BY title`, (error, games) => {
+			db.all(`SELECT rowid AS id, * FROM games ORDER BY ltrim(title, 'The ')`, (error, games) => {
 				if (error) {
 					console.log(`Error retrieving games: ${error}`)
 					res.status(404).send(`Error retrieving games: ${error}`)
@@ -279,6 +279,37 @@ gamesRouter.put('/playthrough-finish/:playthroughId', (req, res) => {
 		})
 
 		db.close()
+	}
+})
+
+gamesRouter.post('/playthrough-edit/:playthroughId', (req, res) => {
+	if (req.body.password !== password) {
+		res.status(400).send()
+	} else {
+		const db = new sqlite3.Database('./games.sqlite', error => {
+			if (error) {
+				console.log(`Error connecting to database: ${error}`)
+			}
+		})
+
+		const playthroughData = {
+			dateStarted: req.body.dateStarted,
+			dateFinished: req.body.dateFinished,
+			hoursPlayed: req.body.hoursPlayed,
+			timesCompleted: req.body.timesCompleted,
+			platform: req.body.platform
+		}
+
+		const setString = generateQuery('update', playthroughData)
+
+		db.run(`UPDATE playthroughs SET ${setString} WHERE rowid = ${req.params.playthroughId}`, function(error) {
+			if (error) {
+				console.log(`Error updating playthrough: ${error}`)
+				res.status(404).send(`Error updating playthrough: ${error}`)
+			} else {
+				res.send()
+			}
+		})
 	}
 })
 
