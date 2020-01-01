@@ -63,7 +63,7 @@ gamesRouter.get('/all', (req, res) => {
 		} else {
 			playthroughs = playthroughs.sort((playthroughA, playthroughB) => new Date(playthroughB.dateStarted) - new Date(playthroughA.dateStarted))
 
-			db.all(`SELECT rowid AS id, * FROM games ORDER BY ltrim(title, 'The ')`, (error, games) => {
+			db.all(`SELECT rowid AS id, * FROM games ORDER BY REPLACE(title, 'The ', '')`, (error, games) => {
 				if (error) {
 					console.log(`Error retrieving games: ${error}`)
 					res.status(404).send(`Error retrieving games: ${error}`)
