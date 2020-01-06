@@ -12,7 +12,7 @@ bookmarksRouter.get('/read', (req, res) => {
 		}
 	})
 
-	db.all(`SELECT rowid, * FROM bookmarks ORDER BY REPLACE(site, 'The ', '')`, (error, rows) => {
+	db.all(`SELECT rowid, * FROM bookmarks ORDER BY LOWER(REPLACE(site, 'The ', ''))`, (error, rows) => {
 		if (error) {
 			console.log(`Error retrieving bookmarks: ${error}`)
 			res.status(400).send(`Error retrieving bookmarks: ${error}`)
