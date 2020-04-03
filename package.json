@@ -5,7 +5,7 @@
 	"main": "server.js",
 	"private": true,
 	"scripts": {
-		"dev": "cross-env NODE_ENV=development node server.js",
+		"dev": "cross-env NODE_ENV=development nodemon server.js",
 		"start": "pm2 start server.js --env production",
 		"stop": "pm2 stop server.js"
 	},
@@ -19,15 +19,16 @@
 	],
 	"dependencies": {
 		"compression": "^1.7.4",
-		"cors-anywhere": "^0.4.1",
+		"cors-anywhere": "^0.4.3",
 		"express": "^4.17.1",
-		"helmet": "^3.21.2",
-		"sqlite3": "^4.1.1"
+		"helmet": "^3.23.1",
+		"sqlite3": "^4.2.0"
 	},
 	"devDependencies": {
-		"babel-eslint": "^10.0.3",
-		"cross-env": "^7.0.0",
-		"eslint": "^6.8.0",
-		"eslint-plugin-compat": "^3.5.1"
+		"babel-eslint": "^10.1.0",
+		"cross-env": "^7.0.2",
+		"eslint": "^7.2.0",
+		"eslint-plugin-compat": "^3.7.0",
+		"nodemon": "^2.0.4"
 	}
 }
