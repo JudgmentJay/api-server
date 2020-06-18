@@ -5,30 +5,23 @@
 	"main": "server.js",
 	"private": true,
 	"scripts": {
-		"dev": "cross-env NODE_ENV=development nodemon server.js",
+		"dev": "nodemon server.js",
 		"start": "pm2 start server.js --env production",
 		"stop": "pm2 stop server.js"
 	},
 	"author": "Jay Posten",
 	"license": "UNLICENSED",
-	"browserslist": [
-		"> 1%",
-		"not dead",
-		"not ie <= 11",
-		"not op_mini all"
-	],
 	"dependencies": {
 		"compression": "^1.7.4",
 		"cors-anywhere": "^0.4.3",
 		"express": "^4.17.1",
-		"helmet": "^3.23.1",
-		"sqlite3": "^4.2.0"
+		"helmet": "^4.1.1",
+		"sqlite3": "^5.0.0"
 	},
 	"devDependencies": {
 		"babel-eslint": "^10.1.0",
-		"cross-env": "^7.0.2",
-		"eslint": "^7.2.0",
-		"eslint-plugin-compat": "^3.7.0",
+		"eslint": "^7.9.0",
+		"eslint-plugin-compat": "^3.8.0",
 		"nodemon": "^2.0.4"
 	}
 }

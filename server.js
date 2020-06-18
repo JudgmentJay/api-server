@@ -12,16 +12,9 @@ server.use(helmet())
 server.use(compression())
 server.use(express.json())
 
-server.use((req, res, next) => {
-	res.header('Access-Control-Allow-Origin', 'http://localhost:8080')
-	res.header('Access-Control-Allow-Headers', 'Content-Type')
-	res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE')
-
-	next()
-})
-
 const proxy = cors.createServer({
-	originWhitelist: []
+	originWhitelist: [],
+	requireHeader: ['origin', 'x-requested-with']
 })
 
 server.get('/proxy/:proxyUrl*', (req, res) => {
