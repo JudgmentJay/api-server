@@ -1,7 +1,10 @@
 const express = require('express')
 const sqlite3 = require('sqlite3')
+const cache = require('memory-cache')
 
 const gamesRouter = express.Router()
+
+const cacheKey = 'games'
 
 const password = '$$jaysnewtabpassword$$'
 
@@ -50,44 +53,52 @@ const generateQuery = (type, data) => {
 }
 
 gamesRouter.get('/all', (req, res) => {
-	const db = new sqlite3.Database('./games.sqlite', error => {
-		if (error) {
-			console.log(`Error connecting to database: ${error}`)
-		}
-	})
+	const cachedData = cache.get(cacheKey)
 
-	db.all(`SELECT rowid AS id, * FROM playthroughs ORDER BY dateFinished`, (error, playthroughs) => {
-		if (error) {
-			console.log(`Error retrieving playthroughs: ${error}`)
-			res.status(404).send(`Error retrieving playthroughs: ${error}`)
-		} else {
-			playthroughs = playthroughs.sort((playthroughA, playthroughB) => new Date(playthroughB.dateStarted) - new Date(playthroughA.dateStarted))
+	if (cachedData) {
+		res.json(cachedData)
+	} else {
+		const db = new sqlite3.Database('./games.sqlite', error => {
+			if (error) {
+				console.log(`Error connecting to database: ${error}`)
+			}
+		})
 
-			db.all(`SELECT rowid AS id, * FROM games ORDER BY LOWER(REPLACE(title, 'The ', ''))`, (error, games) => {
-				if (error) {
-					console.log(`Error retrieving games: ${error}`)
-					res.status(404).send(`Error retrieving games: ${error}`)
-				} else {
-					games.forEach((game) => {
-						const gamePlaythroughs = playthroughs.filter((playthrough) => {
-							return playthrough.gameId === game.id
+		db.all(`SELECT rowid AS id, * FROM playthroughs ORDER BY dateFinished`, (error, playthroughs) => {
+			if (error) {
+				console.log(`Error retrieving playthroughs: ${error}`)
+				res.status(404).send(`Error retrieving playthroughs: ${error}`)
+			} else {
+				playthroughs = playthroughs.sort((playthroughA, playthroughB) => new Date(playthroughB.dateStarted) - new Date(playthroughA.dateStarted))
+
+				db.all(`SELECT rowid AS id, * FROM games ORDER BY LOWER(REPLACE(title, 'The ', ''))`, (error, games) => {
+					if (error) {
+						console.log(`Error retrieving games: ${error}`)
+						res.status(404).send(`Error retrieving games: ${error}`)
+					} else {
+						games.forEach((game) => {
+							const gamePlaythroughs = playthroughs.filter((playthrough) => {
+								return playthrough.gameId === game.id
+							})
+
+							game.playthroughs = gamePlaythroughs
 						})
 
-						game.playthroughs = gamePlaythroughs
-					})
+						const dataToSend = {
+							games,
+							playthroughs
+						}
 
-					const dataToSend = {
-						games,
-						playthroughs
+						cache.put(cacheKey, dataToSend)
+
+						res.json(dataToSend)
 					}
+				})
+			}
+		})
 
-					res.json(dataToSend)
-				}
-			})
-		}
-	})
-
-	db.close()
+		db.close()
+	}
 })
 
 gamesRouter.post('/add', (req, res) => {
@@ -133,10 +144,14 @@ gamesRouter.post('/add', (req, res) => {
 							console.log(`Error adding new game playthrough: ${error}`)
 							res.status(404).send(`Error adding new game playthrough: ${error}`)
 						} else {
+							cache.del(cacheKey)
+
 							res.send()
 						}
 					})
 				} else {
+					cache.del(cacheKey)
+
 					res.send()
 				}
 			}
@@ -169,6 +184,8 @@ gamesRouter.put('/edit/:gameId', (req, res) => {
 				console.log(`Error updating game: ${error}`)
 				res.status(404).send()
 			} else {
+				cache.del(cacheKey)
+
 				res.send()
 			}
 		})
@@ -192,6 +209,8 @@ gamesRouter.delete('/delete/:gameId', (req, res) => {
 				console.log(`Error deleting game: ${error}`)
 				res.status(404).send()
 			} else {
+				cache.del(cacheKey)
+
 				res.send()
 			}
 		})
@@ -228,6 +247,8 @@ gamesRouter.post('/playthroughs/start/:gameId', (req, res) => {
 						console.log(`Error setting game to playing: ${error}`)
 						res.status(404).send(`Error setting game to playing: ${error}`)
 					} else {
+						cache.del(cacheKey)
+
 						res.send()
 					}
 				})
@@ -272,6 +293,8 @@ gamesRouter.put('/playthroughs/finish/:playthroughId', (req, res) => {
 						console.log(`Error setting game to not playing: ${error}`)
 						res.status(404).send(`Error setting game to not playing: ${error}`)
 					} else {
+						cache.del(cacheKey)
+
 						res.send()
 					}
 				})
@@ -308,6 +331,8 @@ gamesRouter.post('/playthroughs/add/:gameId', (req, res) => {
 				console.log(`Error adding new playthrough: ${error}`)
 				res.status(404).send(`Error adding new playthrough: ${error}`)
 			} else {
+				cache.del(cacheKey)
+
 				res.send()
 			}
 		})
@@ -339,6 +364,8 @@ gamesRouter.put('/playthroughs/edit/:playthroughId', (req, res) => {
 				console.log(`Error updating playthrough: ${error}`)
 				res.status(404).send(`Error updating playthrough: ${error}`)
 			} else {
+				cache.del(cacheKey)
+
 				res.send()
 			}
 		})
@@ -360,6 +387,8 @@ gamesRouter.delete('/playthroughs/delete/:playthroughId', (req, res) => {
 				console.log(`Error deleting playthrough: ${error}`)
 				res.status(404).send(`Error deleting playthrough: ${error}`)
 			} else {
+				cache.del(cacheKey)
+
 				res.send()
 			}
 		})

@@ -1,27 +1,38 @@
 const express = require('express')
 const sqlite3 = require('sqlite3')
+const cache = require('memory-cache')
 
 const bookmarksRouter = express.Router()
+
+const cacheKey = 'bookmarks'
 
 const password = '$$jaysnewtabpassword$$'
 
 bookmarksRouter.get('/read', (req, res) => {
-	const db = new sqlite3.Database('./bookmarks.sqlite', error => {
-		if (error) {
-			console.log(`Error connecting to database: ${error}`)
-		}
-	})
+	const cachedData = cache.get(cacheKey)
 
-	db.all(`SELECT rowid, * FROM bookmarks ORDER BY LOWER(REPLACE(site, 'The ', ''))`, (error, rows) => {
-		if (error) {
-			console.log(`Error retrieving bookmarks: ${error}`)
-			res.status(400).send(`Error retrieving bookmarks: ${error}`)
-		} else {
-			res.json(rows)
-		}
-	})
+	if (cachedData) {
+		res.json(cachedData)
+	} else {
+		const db = new sqlite3.Database('./bookmarks.sqlite', error => {
+			if (error) {
+				console.log(`Error connecting to database: ${error}`)
+			}
+		})
 
-	db.close()
+		db.all(`SELECT rowid, * FROM bookmarks ORDER BY LOWER(REPLACE(site, 'The ', ''))`, (error, rows) => {
+			if (error) {
+				console.log(`Error retrieving bookmarks: ${error}`)
+				res.status(400).send(`Error retrieving bookmarks: ${error}`)
+			} else {
+				cache.put(cacheKey, rows)
+
+				res.json(rows)
+			}
+		})
+
+		db.close()
+	}
 })
 
 bookmarksRouter.post('/write', (req, res) => {
@@ -54,6 +65,8 @@ bookmarksRouter.post('/write', (req, res) => {
 				console.log(`Error inserting row: ${error}`)
 				res.status(400).send()
 			} else {
+				cache.del(cacheKey)
+
 				res.send()
 			}
 		})
@@ -92,6 +105,8 @@ bookmarksRouter.put('/edit/:rowid', (req, res) => {
 				console.log(`Error updating row: ${error}`)
 				res.status(400).send()
 			} else {
+				cache.del(cacheKey)
+
 				res.send()
 			}
 		})
@@ -117,6 +132,8 @@ bookmarksRouter.delete('/delete/:rowid', (req, res) => {
 				console.log(`Error deleting row: ${error}`)
 				res.status(400).send()
 			} else {
+				cache.del(cacheKey)
+
 				res.send()
 			}
 		})
