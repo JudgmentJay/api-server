@@ -7,6 +7,7 @@ dotenv.config()
 
 const bookmarksRouter = require('./routers/bookmarks')
 const gamesRouter = require('./routers/games')
+const passwordsRouter = require('./routers/passwords')
 const proxyRouter = require('./routers/proxy')
 const weatherRouter = require('./routers/weather')
 
@@ -18,6 +19,7 @@ server.use(express.json())
 
 server.use('/bookmarks', bookmarksRouter)
 server.use('/games', gamesRouter)
+server.use('/passwords', passwordsRouter)
 server.use('/proxy', proxyRouter)
 server.use('/weather', weatherRouter)
 
