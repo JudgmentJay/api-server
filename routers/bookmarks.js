@@ -6,7 +6,7 @@ const bookmarksRouter = express.Router()
 
 const cacheKey = 'bookmarks'
 
-const password = '$$jaysnewtabpassword$$'
+const password = process.env.SERVER_PW
 
 bookmarksRouter.get('/read', (req, res) => {
 	const cachedData = cache.get(cacheKey)
@@ -14,16 +14,11 @@ bookmarksRouter.get('/read', (req, res) => {
 	if (cachedData) {
 		res.json(cachedData)
 	} else {
-		const db = new sqlite3.Database('./bookmarks.sqlite', error => {
-			if (error) {
-				console.log(`Error connecting to database: ${error}`)
-			}
-		})
+		const db = new sqlite3.Database('./bookmarks.sqlite')
 
 		db.all(`SELECT rowid, * FROM bookmarks ORDER BY LOWER(REPLACE(site, 'The ', ''))`, (error, rows) => {
 			if (error) {
-				console.log(`Error retrieving bookmarks: ${error}`)
-				res.status(400).send(`Error retrieving bookmarks: ${error}`)
+				res.status(404).send(`Error retrieving bookmarks: ${error}`)
 			} else {
 				cache.put(cacheKey, rows)
 
@@ -44,7 +39,7 @@ bookmarksRouter.post('/write', (req, res) => {
 	const category = req.body.category
 
 	if (req.body.password !== password) {
-		res.status(400).send()
+		res.status(401).send('Invalid password')
 	} else {
 		if (site.includes('\'')) {
 			site = site.replace(/'/g, '\'\'')
@@ -54,20 +49,15 @@ bookmarksRouter.post('/write', (req, res) => {
 			url = url.replace(/'/g, '\'\'')
 		}
 
-		const db = new sqlite3.Database('./bookmarks.sqlite', error => {
-			if (error) {
-				console.log(`Error connecting to database. ${error}`)
-			}
-		})
+		const db = new sqlite3.Database('./bookmarks.sqlite')
 
 		db.run(`INSERT INTO bookmarks (site, url, category) VALUES ('${site}', '${url}', '${category}')`, error => {
 			if (error) {
-				console.log(`Error inserting row: ${error}`)
-				res.status(400).send()
+				res.status(500).send(`Error inserting bookmark: ${error}`)
 			} else {
 				cache.del(cacheKey)
 
-				res.send()
+				res.send({})
 			}
 		})
 
@@ -84,7 +74,7 @@ bookmarksRouter.put('/edit/:rowid', (req, res) => {
 	} = req.body
 
 	if (req.body.password !== password) {
-		res.status(400).send()
+		res.status(401).send('Invalid password')
 	} else {
 		if (site.includes('\'')) {
 			site = site.replace(/'/g, '\'\'')
@@ -94,20 +84,15 @@ bookmarksRouter.put('/edit/:rowid', (req, res) => {
 			url = url.replace(/'/g, '\'\'')
 		}
 
-		const db = new sqlite3.Database('./bookmarks.sqlite', error => {
-			if (error) {
-				console.log(`Error connecting to database. ${error}`)
-			}
-		})
+		const db = new sqlite3.Database('./bookmarks.sqlite')
 
 		db.run(`UPDATE bookmarks SET site = '${site}', url = '${url}' WHERE rowid = '${rowid}'`, error => {
 			if (error) {
-				console.log(`Error updating row: ${error}`)
-				res.status(400).send()
+				res.status(500).send(`Error updating bookmark: ${error}`)
 			} else {
 				cache.del(cacheKey)
 
-				res.send()
+				res.send({})
 			}
 		})
 
@@ -119,22 +104,17 @@ bookmarksRouter.delete('/delete/:rowid', (req, res) => {
 	const rowid = req.params.rowid
 
 	if (req.body.password !== password) {
-		res.status(400).send()
+		res.status(401).send('Invalid password')
 	} else {
-		const db = new sqlite3.Database('./bookmarks.sqlite', error => {
-			if (error) {
-				console.log(`Error connecting to database. ${error}`)
-			}
-		})
+		const db = new sqlite3.Database('./bookmarks.sqlite')
 
 		db.run(`DELETE FROM bookmarks WHERE rowid = '${rowid}'`, error => {
 			if (error) {
-				console.log(`Error deleting row: ${error}`)
-				res.status(400).send()
+				res.status(500).send(`Error deleting bookmark: ${error}`)
 			} else {
 				cache.del(cacheKey)
 
-				res.send()
+				res.send({})
 			}
 		})
 

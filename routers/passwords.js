@@ -20,21 +20,26 @@ passwordsRouter.get('/', (req, res) => {
 		const db = `mongodb+srv://${user}:${pass}@passwords.tznlx.mongodb.net/stuff?retryWrites=true&w=majority`
 
 		mongoose.connect(db, { useNewUrlParser: true, useUnifiedTopology: true })
-			.then(() => console.log('Connected to database'))
+			.then(() => {
+				Password.find({}, { '_id': 0 })
+					.then((result) => {
+						cache.put(cacheKey, result)
+
+						mongoose.disconnect()
+
+						res.send(result)
+					})
+					.catch((error) => {
+						console.error(`Error retrieving passwords: ${error.message}`)
+
+						res.status(500).send('Error retrieving passwords')
+					})
+			})
 			.catch((error) => {
-				console.log(`Error connecting to database: ${error}`)
-				res.status(403).send(error)
+				console.error(`Error connecting to database: ${error.message}`)
+
+				res.status(401).send('Error connecting to database')
 			})
-
-		Password.find({}, { '_id': 0 })
-			.then((result) => {
-				cache.put(cacheKey, result)
-
-				mongoose.disconnect(() => console.log('Successfully fetched data. Disconnecting...'))
-
-				res.send(result)
-			})
-			.catch((error) => res.status(400).send(error))
 	}
 })
 

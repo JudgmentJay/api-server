@@ -1,5 +1,5 @@
 const express = require('express')
-const fetch = require('node-fetch')
+const axios = require('axios')
 const cache = require('memory-cache')
 
 const weatherRouter = express.Router()
@@ -18,27 +18,24 @@ weatherRouter.get('/:filters', (req, res) => {
 		const longitude = filters[1]
 		const exclusions = filters[2]
 
-		fetch(`http://localhost:3010/proxy/https://api.darksky.net/forecast/${apiKey}/${latitude},${longitude}?exclude=${exclusions}`, {
+		axios.get(`http://localhost:3010/proxy/https://api.darksky.net/forecast/${apiKey}/${latitude},${longitude}?exclude=${exclusions}`, {
 			headers: {
 				'x-requested-with': 'XMLHttpRequest'
 			}
 		})
-			.then((response) => response.json())
-			.then((weather) => {
+			.then((response) => {
 				const weatherData = {
-					temperature: weather.currently.temperature,
-					icon: weather.currently.icon,
-					sunrise: weather.daily.data[0].sunriseTime,
-					sunset: weather.daily.data[0].sunsetTime
+					temperature: response.data.currently.temperature,
+					icon: response.data.currently.icon,
+					sunrise: response.data.daily.data[0].sunriseTime,
+					sunset: response.data.daily.data[0].sunsetTime
 				}
 
 				cache.put(cacheKey, weatherData, 600*1000)
 
 				res.json(weatherData)
 			})
-			.catch((error) => {
-				res.status(400).send(error)
-			})
+			.catch((error) => res.status(500).send(`Error fetching weather: ${error}`))
 	}
 })
 

@@ -6,7 +6,7 @@ const gamesRouter = express.Router()
 
 const cacheKey = 'games'
 
-const password = '$$jaysnewtabpassword$$'
+const password = process.env.SERVER_PW
 
 const numberFields = [
 	'gameId',
@@ -58,22 +58,16 @@ gamesRouter.get('/all', (req, res) => {
 	if (cachedData) {
 		res.json(cachedData)
 	} else {
-		const db = new sqlite3.Database('./games.sqlite', error => {
-			if (error) {
-				console.log(`Error connecting to database: ${error}`)
-			}
-		})
+		const db = new sqlite3.Database('./games.sqlite')
 
 		db.all(`SELECT rowid AS id, * FROM playthroughs ORDER BY dateFinished`, (error, playthroughs) => {
 			if (error) {
-				console.log(`Error retrieving playthroughs: ${error}`)
 				res.status(404).send(`Error retrieving playthroughs: ${error}`)
 			} else {
 				playthroughs = playthroughs.sort((playthroughA, playthroughB) => new Date(playthroughB.dateStarted) - new Date(playthroughA.dateStarted))
 
 				db.all(`SELECT rowid AS id, * FROM games ORDER BY LOWER(REPLACE(title, 'The ', ''))`, (error, games) => {
 					if (error) {
-						console.log(`Error retrieving games: ${error}`)
 						res.status(404).send(`Error retrieving games: ${error}`)
 					} else {
 						games.forEach((game) => {
@@ -103,7 +97,7 @@ gamesRouter.get('/all', (req, res) => {
 
 gamesRouter.post('/add', (req, res) => {
 	if (req.body.password !== password) {
-		res.status(400).send()
+		res.status(401).send('Invalid password')
 	} else {
 		const gameData = {
 			title: req.body.title,
@@ -114,16 +108,11 @@ gamesRouter.post('/add', (req, res) => {
 
 		const query = generateQuery('insert', gameData)
 
-		const db = new sqlite3.Database('./games.sqlite', error => {
-			if (error) {
-				console.log(`Error connecting to database: ${error}`)
-			}
-		})
+		const db = new sqlite3.Database('./games.sqlite')
 
 		db.run(`INSERT INTO games (${query.fields}) VALUES (${query.values})`, function(error) {
 			if (error) {
-				console.log(`Error adding new game: ${error}`)
-				res.status(404).send(`Error adding new game: ${error}`)
+				res.status(500).send(`Error adding new game: ${error}`)
 			} else {
 				if (req.body.dateStarted) {
 					const gameId = this.lastID
@@ -141,18 +130,17 @@ gamesRouter.post('/add', (req, res) => {
 
 					db.run(`INSERT INTO playthroughs (${query.fields}) VALUES (${query.values})`, function(error) {
 						if (error) {
-							console.log(`Error adding new game playthrough: ${error}`)
-							res.status(404).send(`Error adding new game playthrough: ${error}`)
+							res.status(500).send(`Error adding new game playthrough: ${error}`)
 						} else {
 							cache.del(cacheKey)
 
-							res.send()
+							res.send({})
 						}
 					})
 				} else {
 					cache.del(cacheKey)
 
-					res.send()
+					res.send({})
 				}
 			}
 		})
@@ -163,13 +151,9 @@ gamesRouter.post('/add', (req, res) => {
 
 gamesRouter.put('/edit/:gameId', (req, res) => {
 	if (req.body.password !== password) {
-		res.status(400).send()
+		res.status(401).send('Invalid password')
 	} else {
-		const db = new sqlite3.Database('./games.sqlite', error => {
-			if (error) {
-				console.log(`Error connecting to database: ${error}`)
-			}
-		})
+		const db = new sqlite3.Database('./games.sqlite')
 
 		const gameData = {
 			title: req.body.title,
@@ -179,14 +163,13 @@ gamesRouter.put('/edit/:gameId', (req, res) => {
 
 		const setString = generateQuery('update', gameData)
 
-		db.run(`UPDATE games SET ${setString} WHERE rowid = '${req.params.gameId}'`, error => {
+		db.run(`UPDATE games SET ${setString} WHERE rowid = '${req.params.gameId}'`, (error) => {
 			if (error) {
-				console.log(`Error updating game: ${error}`)
-				res.status(404).send()
+				res.status(500).send(`Error updating game: ${error}`)
 			} else {
 				cache.del(cacheKey)
 
-				res.send()
+				res.send({})
 			}
 		})
 
@@ -196,22 +179,17 @@ gamesRouter.put('/edit/:gameId', (req, res) => {
 
 gamesRouter.delete('/delete/:gameId', (req, res) => {
 	if (req.body.password !== password) {
-		res.status(400).send()
+		res.status(401).send('Invalid password')
 	} else {
-		const db = new sqlite3.Database('./games.sqlite', error => {
-			if (error) {
-				console.log(`Error connecting to database: ${error}`)
-			}
-		})
+		const db = new sqlite3.Database('./games.sqlite')
 
-		db.run(`DELETE FROM games WHERE rowid = '${req.params.gameId}'`, error => {
+		db.run(`DELETE FROM games WHERE rowid = '${req.params.gameId}'`, (error) => {
 			if (error) {
-				console.log(`Error deleting game: ${error}`)
-				res.status(404).send()
+				res.status(500).send(`Error deleting game: ${error}`)
 			} else {
 				cache.del(cacheKey)
 
-				res.send()
+				res.send({})
 			}
 		})
 
@@ -221,13 +199,9 @@ gamesRouter.delete('/delete/:gameId', (req, res) => {
 
 gamesRouter.post('/playthroughs/start/:gameId', (req, res) => {
 	if (req.body.password !== password) {
-		res.status(400).send()
+		res.status(401).send('Invalid password')
 	} else {
-		const db = new sqlite3.Database('./games.sqlite', error => {
-			if (error) {
-				console.log(`Error connecting to database: ${error}`)
-			}
-		})
+		const db = new sqlite3.Database('./games.sqlite')
 
 		const playthroughData = {
 			gameId: req.params.gameId,
@@ -239,17 +213,15 @@ gamesRouter.post('/playthroughs/start/:gameId', (req, res) => {
 
 		db.run(`INSERT INTO playthroughs (${query.fields}) VALUES (${query.values})`, function(error) {
 			if (error) {
-				console.log(`Error starting new playthrough: ${error}`)
-				res.status(404).send(`Error starting new playthrough: ${error}`)
+				res.status(500).send(`Error starting new playthrough: ${error}`)
 			} else {
 				db.run(`UPDATE games SET playing = 1 WHERE rowid = ${req.params.gameId}`, error => {
 					if (error) {
-						console.log(`Error setting game to playing: ${error}`)
-						res.status(404).send(`Error setting game to playing: ${error}`)
+						res.status(500).send(`Error setting game to playing: ${error}`)
 					} else {
 						cache.del(cacheKey)
 
-						res.send()
+						res.send({})
 					}
 				})
 			}
@@ -259,13 +231,9 @@ gamesRouter.post('/playthroughs/start/:gameId', (req, res) => {
 
 gamesRouter.put('/playthroughs/finish/:playthroughId', (req, res) => {
 	if (req.body.password !== password) {
-		res.status(400).send()
+		res.status(401).send('Invalid password')
 	} else {
-		const db = new sqlite3.Database('./games.sqlite', error => {
-			if (error) {
-				console.log(`Error connecting to database: ${error}`)
-			}
-		})
+		const db = new sqlite3.Database('./games.sqlite')
 
 		const playthroughData = {
 			dateStarted: req.body.dateStarted,
@@ -277,10 +245,9 @@ gamesRouter.put('/playthroughs/finish/:playthroughId', (req, res) => {
 
 		const setString = generateQuery('update', playthroughData)
 
-		db.run(`UPDATE playthroughs SET ${setString} WHERE rowid = '${req.params.playthroughId}'`, error => {
+		db.run(`UPDATE playthroughs SET ${setString} WHERE rowid = '${req.params.playthroughId}'`, (error) => {
 			if (error) {
-				console.log(`Error finishing playthrough: ${error}`)
-				res.status(404).send(`Error finishing playthrough: ${error}`)
+				res.status(500).send(`Error finishing playthrough: ${error}`)
 			} else {
 				const gameData = {
 					score: req.body.score
@@ -288,14 +255,13 @@ gamesRouter.put('/playthroughs/finish/:playthroughId', (req, res) => {
 
 				const setString = generateQuery('update', gameData)
 
-				db.run(`UPDATE games SET playing = 0, ${setString} WHERE rowid = ${req.body.gameId}`, error => {
+				db.run(`UPDATE games SET playing = 0, ${setString} WHERE rowid = ${req.body.gameId}`, (error) => {
 					if (error) {
-						console.log(`Error setting game to not playing: ${error}`)
-						res.status(404).send(`Error setting game to not playing: ${error}`)
+						res.status(500).send(`Error setting game to not playing: ${error}`)
 					} else {
 						cache.del(cacheKey)
 
-						res.send()
+						res.send({})
 					}
 				})
 			}
@@ -307,13 +273,9 @@ gamesRouter.put('/playthroughs/finish/:playthroughId', (req, res) => {
 
 gamesRouter.post('/playthroughs/add/:gameId', (req, res) => {
 	if (req.body.password !== password) {
-		res.status(400).send()
+		res.status(401).send('Invalid password')
 	} else {
-		const db = new sqlite3.Database('./games.sqlite', error => {
-			if (error) {
-				console.log(`Error connecting to database: ${error}`)
-			}
-		})
+		const db = new sqlite3.Database('./games.sqlite')
 
 		const playthroughData = {
 			gameId: req.params.gameId,
@@ -328,12 +290,11 @@ gamesRouter.post('/playthroughs/add/:gameId', (req, res) => {
 
 		db.run(`INSERT INTO playthroughs (${query.fields}) VALUES (${query.values})`, function(error) {
 			if (error) {
-				console.log(`Error adding new playthrough: ${error}`)
-				res.status(404).send(`Error adding new playthrough: ${error}`)
+				res.status(500).send(`Error adding new playthrough: ${error}`)
 			} else {
 				cache.del(cacheKey)
 
-				res.send()
+				res.send({})
 			}
 		})
 	}
@@ -341,13 +302,9 @@ gamesRouter.post('/playthroughs/add/:gameId', (req, res) => {
 
 gamesRouter.put('/playthroughs/edit/:playthroughId', (req, res) => {
 	if (req.body.password !== password) {
-		res.status(400).send()
+		res.status(401).send('Invalid password')
 	} else {
-		const db = new sqlite3.Database('./games.sqlite', error => {
-			if (error) {
-				console.log(`Error connecting to database: ${error}`)
-			}
-		})
+		const db = new sqlite3.Database('./games.sqlite')
 
 		const playthroughData = {
 			dateStarted: req.body.dateStarted,
@@ -361,12 +318,11 @@ gamesRouter.put('/playthroughs/edit/:playthroughId', (req, res) => {
 
 		db.run(`UPDATE playthroughs SET ${setString} WHERE rowid = ${req.params.playthroughId}`, function(error) {
 			if (error) {
-				console.log(`Error updating playthrough: ${error}`)
-				res.status(404).send(`Error updating playthrough: ${error}`)
+				res.status(500).send(`Error updating playthrough: ${error}`)
 			} else {
 				cache.del(cacheKey)
 
-				res.send()
+				res.send({})
 			}
 		})
 	}
@@ -374,22 +330,17 @@ gamesRouter.put('/playthroughs/edit/:playthroughId', (req, res) => {
 
 gamesRouter.delete('/playthroughs/delete/:playthroughId', (req, res) => {
 	if (req.body.password !== password) {
-		res.status(400).send()
+		res.status(500).send()
 	} else {
-		const db = new sqlite3.Database('./games.sqlite', error => {
-			if (error) {
-				console.log(`Error connecting to database: ${error}`)
-			}
-		})
+		const db = new sqlite3.Database('./games.sqlite')
 
 		db.run(`DELETE FROM playthroughs WHERE rowid = ${req.params.playthroughId}`, function(error) {
 			if (error) {
-				console.log(`Error deleting playthrough: ${error}`)
-				res.status(404).send(`Error deleting playthrough: ${error}`)
+				res.status(500).send(`Error deleting playthrough: ${error}`)
 			} else {
 				cache.del(cacheKey)
 
-				res.send()
+				res.send({})
 			}
 		})
 	}
