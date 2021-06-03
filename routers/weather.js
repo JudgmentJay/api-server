@@ -18,7 +18,7 @@ weatherRouter.get('/:filters', (req, res) => {
 		const longitude = filters[1]
 		const exclusions = filters[2]
 
-		axios.get(`http://localhost:3010/proxy/https://api.darksky.net/forecast/${apiKey}/${latitude},${longitude}?exclude=${exclusions}`, {
+		axios.get(`http://localhost:3000/proxy/https://api.darksky.net/forecast/${apiKey}/${latitude},${longitude}?exclude=${exclusions}`, {
 			headers: {
 				'x-requested-with': 'XMLHttpRequest'
 			}
