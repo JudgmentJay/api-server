@@ -1,5 +1,4 @@
 data
 node_modules
 .env
-**/routers/passwords.js
 **.sqlite
